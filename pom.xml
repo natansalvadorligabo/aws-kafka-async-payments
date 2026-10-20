@@ -22,6 +22,7 @@
         <module>payments-test-support</module>
         <module>payments-api</module>
         <module>payments-consumer</module>
+        <module>payments-lambda</module>
     </modules>
 
     <properties>
