@@ -1,11 +1,19 @@
+name: payments
+
 services:
   localstack:
     # 4.14.0 is the last image that starts without a LOCALSTACK_AUTH_TOKEN.
     image: localstack/localstack:4.14.0
     ports:
       - "4566:4566"
+    environment:
+      # Lambda containers join this network so they can reach LocalStack.
+      LAMBDA_DOCKER_NETWORK: payments
     volumes:
       - ./infra/localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+      - ./infra/localstack/deploy-lambda.sh:/opt/payments/deploy-lambda.sh
+      - ./payments-lambda/target/payments-lambda.zip:/opt/payments/payments-lambda.zip
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       # The table is the last resource the init script creates.
       test: ["CMD-SHELL", "awslocal dynamodb describe-table --table-name processed-payments >/dev/null"]
@@ -24,8 +32,13 @@ services:
 
   consumer:
     build: payments-consumer
+    profiles: [spring]
     environment:
       AWS_ENDPOINT: http://localstack:4566
     depends_on:
       localstack:
         condition: service_healthy
+
+networks:
+  default:
+    name: payments
