@@ -1,11 +1,11 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Fake {@link ProcessedPayments} backed by a concurrent set. */
-class InMemoryProcessedPayments implements ProcessedPayments {
+public class InMemoryProcessedPayments implements ProcessedPayments {
 
     private final Set<UUID> claimed = ConcurrentHashMap.newKeySet();
 
@@ -19,7 +19,7 @@ class InMemoryProcessedPayments implements ProcessedPayments {
         claimed.remove(paymentId);
     }
 
-    boolean isClaimed(UUID paymentId) {
+    public boolean isClaimed(UUID paymentId) {
         return claimed.contains(paymentId);
     }
 }

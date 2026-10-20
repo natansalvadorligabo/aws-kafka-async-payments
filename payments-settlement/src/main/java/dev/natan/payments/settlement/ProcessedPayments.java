@@ -1,4 +1,4 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import java.util.UUID;
 

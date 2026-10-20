@@ -3,6 +3,7 @@ package dev.natan.payments.consumer;
 import org.springframework.stereotype.Component;
 
 import dev.natan.payments.contract.PaymentRequested;
+import dev.natan.payments.settlement.PaymentSettlement;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 
 /**

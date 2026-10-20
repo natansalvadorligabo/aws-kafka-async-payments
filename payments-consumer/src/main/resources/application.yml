@@ -12,5 +12,5 @@ logging.structured.format.console: ecs
 
 payments:
   queue: payments
-  settled-topic: payment-settled
+  settled-topic-arn: arn:aws:sns:us-east-1:000000000000:payment-settled
   processed-table: processed-payments

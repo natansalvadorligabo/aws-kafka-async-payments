@@ -1,22 +1,19 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import java.util.Map;
 import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
-@Component
-class DynamoDbProcessedPayments implements ProcessedPayments {
+/** {@link ProcessedPayments} backed by a conditional put on a DynamoDB table keyed by paymentId. */
+public class DynamoDbProcessedPayments implements ProcessedPayments {
 
     private final DynamoDbClient dynamoDb;
     private final String tableName;
 
-    DynamoDbProcessedPayments(DynamoDbClient dynamoDb, @Value("${payments.processed-table}") String tableName) {
+    public DynamoDbProcessedPayments(DynamoDbClient dynamoDb, String tableName) {
         this.dynamoDb = dynamoDb;
         this.tableName = tableName;
     }

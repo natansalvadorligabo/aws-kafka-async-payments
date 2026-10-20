@@ -1,10 +1,9 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import java.time.Clock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import dev.natan.payments.contract.PaymentRequested;
 import dev.natan.payments.contract.PaymentSettled;
@@ -16,7 +15,6 @@ import dev.natan.payments.contract.PaymentSettled;
  * paymentSettlement.settle(payment);
  * }</pre>
  */
-@Component
 public class PaymentSettlement {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentSettlement.class);

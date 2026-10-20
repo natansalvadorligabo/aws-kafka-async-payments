@@ -18,6 +18,7 @@
 
     <modules>
         <module>payments-contract</module>
+        <module>payments-settlement</module>
         <module>payments-test-support</module>
         <module>payments-api</module>
         <module>payments-consumer</module>
@@ -42,6 +43,17 @@
                 <groupId>dev.natan.payments</groupId>
                 <artifactId>payments-contract</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.natan.payments</groupId>
+                <artifactId>payments-settlement</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.natan.payments</groupId>
+                <artifactId>payments-settlement</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>dev.natan.payments</groupId>

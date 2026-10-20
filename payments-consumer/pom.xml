@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>dev.natan.payments</groupId>
-            <artifactId>payments-contract</artifactId>
+            <artifactId>payments-settlement</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -53,6 +53,12 @@
         <dependency>
             <groupId>dev.natan.payments</groupId>
             <artifactId>payments-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.natan.payments</groupId>
+            <artifactId>payments-settlement</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>

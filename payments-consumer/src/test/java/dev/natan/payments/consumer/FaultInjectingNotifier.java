@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import dev.natan.payments.contract.PaymentSettled;
+import dev.natan.payments.settlement.SettlementNotifier;
 
 /** Decorates the real notifier: fails chosen payments a given number of times and records every attempt. */
 class FaultInjectingNotifier implements SettlementNotifier {

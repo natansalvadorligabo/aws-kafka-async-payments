@@ -1,4 +1,4 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -6,7 +6,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import dev.natan.payments.contract.PaymentSettled;
 
 /** Spy {@link SettlementNotifier}: records what was published, and can be told to fail. */
-class SpySettlementNotifier implements SettlementNotifier {
+public class SpySettlementNotifier implements SettlementNotifier {
 
     private final List<PaymentSettled> published = new CopyOnWriteArrayList<>();
     private volatile boolean failing;
@@ -19,15 +19,15 @@ class SpySettlementNotifier implements SettlementNotifier {
         published.add(settled);
     }
 
-    void failFromNowOn() {
+    public void failFromNowOn() {
         failing = true;
     }
 
-    void recover() {
+    public void recover() {
         failing = false;
     }
 
-    List<PaymentSettled> published() {
+    public List<PaymentSettled> published() {
         return List.copyOf(published);
     }
 }

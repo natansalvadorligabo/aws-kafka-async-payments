@@ -1,4 +1,4 @@
-package dev.natan.payments.consumer;
+package dev.natan.payments.settlement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

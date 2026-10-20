@@ -1,24 +1,24 @@
-package dev.natan.payments.consumer;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+package dev.natan.payments.settlement;
 
 import dev.natan.payments.contract.PaymentSettled;
-import io.awspring.cloud.sns.core.SnsTemplate;
+import software.amazon.awssdk.services.sns.SnsClient;
+import tools.jackson.databind.json.JsonMapper;
 
-@Component
-class SnsSettlementNotifier implements SettlementNotifier {
+/** Publishes {@link PaymentSettled} as JSON on an SNS topic. */
+public class SnsSettlementNotifier implements SettlementNotifier {
 
-    private final SnsTemplate snsTemplate;
-    private final String topicName;
+    private final SnsClient sns;
+    private final String topicArn;
+    private final JsonMapper json;
 
-    SnsSettlementNotifier(SnsTemplate snsTemplate, @Value("${payments.settled-topic}") String topicName) {
-        this.snsTemplate = snsTemplate;
-        this.topicName = topicName;
+    public SnsSettlementNotifier(SnsClient sns, String topicArn, JsonMapper json) {
+        this.sns = sns;
+        this.topicArn = topicArn;
+        this.json = json;
     }
 
     @Override
     public void publish(PaymentSettled settled) {
-        snsTemplate.convertAndSend(topicName, settled);
+        sns.publish(publish -> publish.topicArn(topicArn).message(json.writeValueAsString(settled)));
     }
 }
