@@ -1,0 +1,31 @@
+services:
+  localstack:
+    # 4.14.0 is the last image that starts without a LOCALSTACK_AUTH_TOKEN.
+    image: localstack/localstack:4.14.0
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./infra/localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+    healthcheck:
+      # The table is the last resource the init script creates.
+      test: ["CMD-SHELL", "awslocal dynamodb describe-table --table-name processed-payments >/dev/null"]
+      interval: 3s
+      retries: 40
+
+  api:
+    build: payments-api
+    ports:
+      - "8080:8080"
+    environment:
+      AWS_ENDPOINT: http://localstack:4566
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  consumer:
+    build: payments-consumer
+    environment:
+      AWS_ENDPOINT: http://localstack:4566
+    depends_on:
+      localstack:
+        condition: service_healthy
