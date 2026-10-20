@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Walks through the SQS flow against the running docker-compose stack (make up).
+# CONSUMER=lambda (default) or CONSUMER=spring, matching the one make up started.
 set -euo pipefail
+
+CONSUMER=${CONSUMER:-lambda}
 
 API=http://localhost:8080
 QUEUE_URL=http://localhost:4566/000000000000
@@ -24,12 +27,29 @@ settled_count() {
   awslocal dynamodb scan --table-name processed-payments --select COUNT --query Count --output text
 }
 
-until curl -s -o /dev/null "$API/payments"; do sleep 1; done
+set_lambda_trigger() {
+  local mapping
+  mapping=$(awslocal lambda list-event-source-mappings --function-name settle-payments     --query 'EventSourceMappings[0].UUID' --output text)
+  awslocal lambda update-event-source-mapping --uuid "$mapping" "$1" >/dev/null
+  until [ "$(awslocal lambda get-event-source-mapping --uuid "$mapping" --query State --output text)" = "$2" ]; do
+    sleep 1
+  done
+}
+
+stop_consumer() {
+  if [ "$CONSUMER" = lambda ]; then set_lambda_trigger --no-enabled Disabled; else docker compose stop consumer; fi
+}
+
+start_consumer() {
+  if [ "$CONSUMER" = lambda ]; then set_lambda_trigger --enabled Enabled; else docker compose start consumer; fi
+}
+
+until curl -s "$API/payments" >/dev/null; do sleep 1; done
 
 settled_before=$(settled_count)
 
-step "1. The consumer goes down"
-docker compose stop consumer
+step "1. The consumer ($CONSUMER) goes down"
+stop_consumer
 
 step "2. The API still answers 202 (and 400 for an invalid request)"
 for i in 1 2 3 4 5; do pay "acc-$i" "user$i@example.com" "1$i.90"; done
@@ -39,8 +59,8 @@ step "3. The payments wait on SQS"
 waiting=$(messages_on payments)
 echo "messages on 'payments': $waiting"
 
-step "4. The consumer comes back"
-docker compose start consumer
+step "4. The consumer ($CONSUMER) comes back"
+start_consumer
 until [ "$(messages_on payments)" = "0" ]; do sleep 1; done
 echo "messages on 'payments': 0"
 
