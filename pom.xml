@@ -18,6 +18,7 @@
 
     <modules>
         <module>payments-contract</module>
+        <module>payments-test-support</module>
     </modules>
 
     <properties>
