@@ -19,6 +19,7 @@
     <modules>
         <module>payments-contract</module>
         <module>payments-test-support</module>
+        <module>payments-api</module>
     </modules>
 
     <properties>

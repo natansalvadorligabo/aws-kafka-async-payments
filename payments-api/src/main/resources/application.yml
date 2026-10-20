@@ -1,0 +1,14 @@
+spring:
+  application.name: payments-api
+  mvc.problemdetails.enabled: true
+  cloud.aws:
+    region.static: us-east-1
+    endpoint: ${AWS_ENDPOINT:http://localhost:4566}
+    credentials:
+      # LocalStack accepts any credentials; nothing here touches a real AWS account.
+      access-key: test
+      secret-key: test
+
+logging.structured.format.console: ecs
+
+payments.queue: payments
