@@ -20,6 +20,7 @@
         <module>payments-contract</module>
         <module>payments-test-support</module>
         <module>payments-api</module>
+        <module>payments-consumer</module>
     </modules>
 
     <properties>
