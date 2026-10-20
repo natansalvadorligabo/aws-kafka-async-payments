@@ -17,6 +17,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>payments-contract</module>
     </modules>
 
     <properties>
