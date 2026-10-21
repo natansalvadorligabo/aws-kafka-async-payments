@@ -15,6 +15,14 @@ A study project that compares SQS with Kafka and relational with non-relational 
 | 2. Kafka | same events on a topic, 3 consumer groups, key = account id, replay with a new group | ⏳ next |
 | 3. Data | Postgres ledger (ACID); DynamoDB for idempotency, status and statement | ⏳ planned |
 
+## Live dashboard
+
+`make up` also starts a dashboard at **http://localhost:8081**. It draws the flow from the running stack: SQS's own message counters, settlements as SNS announces them, and dead letters as they reach the DLQ. Buttons provoke each scenario: stop the consumer, send payments, send a duplicate, send a poison message. Each box explains its concept and names the code and the test behind it.
+
+![Dashboard: the Lambda is down and 11 messages wait on SQS](docs/dashboard.jpg)
+
+What it cannot show: SQS reports counts, not individual deliveries, so the retries of a single message are invisible from outside. "Duplicate ignored" is *inferred*: two copies were delivered, one settlement happened, and the queue is empty.
+
 ## Architecture (stage 1)
 
 ```mermaid
@@ -48,6 +56,7 @@ flowchart LR
 | `payments-api` | `POST /payments` → validate → SQS → `202` |
 | `payments-consumer` | Spring Cloud AWS `@SqsListener` around `PaymentSettlement` |
 | `payments-lambda` | `RequestHandler<SQSEvent, SQSBatchResponse>` around `PaymentSettlement` |
+| `payments-dashboard` | live view of the stack (SSE + one static page, no build step) and scenario buttons |
 | `payments-test-support` | the one LocalStack container all tests share, plus queue helpers |
 | `infra/localstack` | `init-aws.sh` (queues, DLQ, topic, table) and `deploy-lambda.sh`, used by **both** compose and the tests |
 
@@ -56,7 +65,8 @@ flowchart LR
 Requirements: Docker, JDK 25, `make`. Everything else (Maven, LocalStack, AWS resources) comes with the repo.
 
 ```bash
-make up                    # build, start LocalStack + API, deploy the Lambda
+make up                    # build, start LocalStack + API + dashboard, deploy the Lambda
+                           # → open http://localhost:8081
 make demo                  # consumer down → payments wait on SQS → consumer back → nothing lost → DLQ
 make down
 
@@ -114,9 +124,11 @@ Measured on one local machine (Windows 11, Docker Desktop 29.6, LocalStack 4.14.
 
 | Measurement | Value |
 |---|---|
-| Full suite (`./mvnw verify`, 14 tests, 3 modules with LocalStack) | 211 s, all green |
+| Full suite (`./mvnw verify`, 34 tests, 4 modules with LocalStack) | 262 s, all green |
 | Message that never settles → DLQ (visibility timeout 10s × 3 receives), Spring consumer | 42.9 s (test duration) |
 | Demo: 5 payments queued with the consumer down → settled after restart | 5 / 5, both consumers |
+| Message that never settles → DLQ, Lambda consumer, seen on the dashboard | 52 s (sent 22:38:15, dead-lettered 22:39:07) |
+| 10 payments sent with the Lambda trigger disabled for ~9 s, latency from `202` to settled | 12.5–12.7 s (time spent waiting on SQS) |
 | Lambda deployment zip (handler + dependencies, `lib/` layout) | 21.5 MB |
 
 ## Repository layout
@@ -125,5 +137,6 @@ Measured on one local machine (Windows 11, Docker Desktop 29.6, LocalStack 4.14.
 infra/localstack/      init-aws.sh, deploy-lambda.sh   (shared by compose and tests)
 payments-*/            Maven modules (see table above)
 scripts/demo.sh        the demo behind `make demo`
+docs/                  images used by this README
 .github/workflows/     CI: `make test`, plus `make up && make demo` for each consumer
 ```
