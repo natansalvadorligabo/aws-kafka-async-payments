@@ -10,6 +10,10 @@ spring:
 
 logging.structured.format.console: ecs
 
+# The API already uses 8080. The listener endpoint lets the dashboard stop and start consumption.
+server.port: 8082
+management.endpoints.web.exposure.include: health,listener
+
 payments:
   queue: payments
   settled-topic-arn: arn:aws:sns:us-east-1:000000000000:payment-settled
