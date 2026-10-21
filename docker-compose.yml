@@ -39,6 +39,19 @@ services:
       localstack:
         condition: service_healthy
 
+  dashboard:
+    build: payments-dashboard
+    ports:
+      - "8081:8081"
+    environment:
+      AWS_ENDPOINT: http://localstack:4566
+      API_URL: http://api:8080
+      CONSUMER_URL: http://consumer:8082
+      CONSUMER: ${CONSUMER:-lambda}
+    depends_on:
+      localstack:
+        condition: service_healthy
+
 networks:
   default:
     name: payments
