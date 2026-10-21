@@ -23,6 +23,7 @@
         <module>payments-api</module>
         <module>payments-consumer</module>
         <module>payments-lambda</module>
+        <module>payments-dashboard</module>
     </modules>
 
     <properties>
