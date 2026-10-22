@@ -57,14 +57,14 @@ class AwsStackReaderTest {
 
     @Test
     void countsSettledPaymentsAndPendingClaimsSeparately() {
-        QueueCounts before = reader.counts();
+        StackCounts before = reader.counts();
 
         putClaim("DONE");
         putClaim("PENDING");
         putClaim("PENDING");
 
-        QueueCounts after = reader.counts();
-        assertThat(after.processed() - before.processed()).isEqualTo(1);
+        StackCounts after = reader.counts();
+        assertThat(after.settled() - before.settled()).isEqualTo(1);
         assertThat(after.pendingClaims() - before.pendingClaims()).isEqualTo(2);
     }
 

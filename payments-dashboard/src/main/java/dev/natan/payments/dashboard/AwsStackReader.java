@@ -35,10 +35,10 @@ class AwsStackReader implements StackReader {
     }
 
     @Override
-    public QueueCounts counts() {
+    public StackCounts counts() {
         Map<QueueAttributeName, String> payments = attributesOf(PAYMENTS_QUEUE);
         Map<QueueAttributeName, String> deadLetters = attributesOf(DEAD_LETTER_QUEUE);
-        return new QueueCounts(
+        return new StackCounts(
                 Integer.parseInt(payments.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)),
                 Integer.parseInt(payments.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE)),
                 Integer.parseInt(deadLetters.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)),

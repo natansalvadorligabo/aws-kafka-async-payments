@@ -8,12 +8,12 @@ import dev.natan.payments.contract.PaymentSettled;
  * Observes the running stack without taking part in it.
  *
  * <pre>{@code
- * QueueCounts counts = stackReader.counts();
+ * StackCounts counts = stackReader.counts();
  * }</pre>
  */
 public interface StackReader {
 
-    QueueCounts counts();
+    StackCounts counts();
 
     /** Removes and returns the PaymentSettled notifications SNS fanned out since the last call. */
     List<PaymentSettled> drainSettled();

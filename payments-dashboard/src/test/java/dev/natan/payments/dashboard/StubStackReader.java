@@ -8,11 +8,11 @@ import dev.natan.payments.contract.PaymentSettled;
 /** Stub {@link StackReader}: returns whatever the test queued up, once. */
 class StubStackReader implements StackReader {
 
-    private QueueCounts counts = new QueueCounts(0, 0, 0, 0, 0);
+    private StackCounts counts = new StackCounts(0, 0, 0, 0, 0);
     private final List<PaymentSettled> settled = new ArrayList<>();
     private final List<DeadLetter> deadLetters = new ArrayList<>();
 
-    void willReport(QueueCounts counts) {
+    void willReport(StackCounts counts) {
         this.counts = counts;
     }
 
@@ -25,7 +25,7 @@ class StubStackReader implements StackReader {
     }
 
     @Override
-    public QueueCounts counts() {
+    public StackCounts counts() {
         return counts;
     }
 

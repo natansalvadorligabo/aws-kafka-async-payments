@@ -60,7 +60,7 @@ function renderState(state) {
     text('waiting', state.waiting);
     text('in-flight', state.inFlight);
     text('dead-letters', state.deadLetters);
-    text('processed', state.processed);
+    text('settled', state.settled);
     text('pending-claims', state.pendingClaims);
     renderQueue(state.waiting, state.inFlight);
 

@@ -28,12 +28,12 @@ class FlowMonitor {
         try {
             stackReader.drainSettled().forEach(timeline::settled);
             stackReader.pollNewDeadLetters().forEach(timeline::deadLettered);
-            QueueCounts counts = stackReader.counts();
+            StackCounts counts = stackReader.counts();
             if (counts.waiting() == 0 && counts.inFlight() == 0) {
                 timeline.queueDrained();
             }
             stream.publish(new StackState(counts.waiting(), counts.inFlight(), counts.deadLetters(),
-                    counts.processed(), counts.pendingClaims(), consumerSwitch.consumer(), consumerSwitch.isOn()));
+                    counts.settled(), counts.pendingClaims(), consumerSwitch.consumer(), consumerSwitch.isOn()));
         } catch (RuntimeException e) {
             log.atWarn().setCause(e).log("stack not readable yet");
         }

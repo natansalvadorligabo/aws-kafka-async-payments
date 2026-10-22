@@ -36,12 +36,12 @@ class FlowMonitorTest {
         UUID paymentId = UUID.randomUUID();
         timeline.duplicateSent(paymentId);
         stackReader.willReport(new PaymentSettled(paymentId, "acc-1", BigDecimal.ONE, Instant.now()));
-        stackReader.willReport(new QueueCounts(0, 1, 0, 1, 0));
+        stackReader.willReport(new StackCounts(0, 1, 0, 1, 0));
 
         monitor.sample();
         assertThat(timeline.recent()).extracting(FlowEvent::type).doesNotContain(Type.DUPLICATE_IGNORED);
 
-        stackReader.willReport(new QueueCounts(0, 0, 0, 1, 0));
+        stackReader.willReport(new StackCounts(0, 0, 0, 1, 0));
         monitor.sample();
         assertThat(timeline.recent()).extracting(FlowEvent::type).contains(Type.DUPLICATE_IGNORED);
     }
