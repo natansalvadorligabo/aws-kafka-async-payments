@@ -2,7 +2,13 @@ package dev.natan.payments.dashboard;
 
 import java.net.URI;
 import java.time.Clock;
+import java.util.Map;
 
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -67,8 +73,40 @@ class DashboardConfiguration {
     }
 
     @Bean
-    FlowTimeline flowTimeline(Clock clock, JsonMapper json) {
-        return new FlowTimeline(clock, json);
+    MessageBodies messageBodies(JsonMapper json) {
+        return new MessageBodies(json);
+    }
+
+    @Bean
+    FlowTimeline flowTimeline(Clock clock, MessageBodies messageBodies) {
+        return new FlowTimeline(clock, messageBodies);
+    }
+
+    @Bean
+    FlowMonitor flowMonitor(StackReader stackReader, ConsumerSwitch consumerSwitch, FlowTimeline timeline,
+            FlowStream stream, @Value("${payments.broker}") String broker) {
+        return new FlowMonitor(stackReader, consumerSwitch, timeline, stream, broker);
+    }
+
+    @Bean
+    PaymentsTopic paymentsTopic(@Value("${payments.broker}") String broker,
+            @Value("${payments.kafka-bootstrap}") String bootstrap, @Value("${payments.topic}") String topic,
+            MessageBodies messageBodies) {
+        return switch (broker) {
+            case "kafka" -> new KafkaPaymentsTopic(
+                    Admin.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap)),
+                    new KafkaConsumer<>(Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap),
+                            new StringDeserializer(), new StringDeserializer()),
+                    topic, messageBodies);
+            case "sqs" -> new NoPaymentsTopic();
+            default -> throw new IllegalArgumentException(
+                    "expected payments.broker to be sqs or kafka, got " + broker);
+        };
+    }
+
+    @Bean
+    TopicMonitor topicMonitor(PaymentsTopic paymentsTopic, FlowTimeline timeline, FlowStream stream) {
+        return new TopicMonitor(paymentsTopic, timeline, stream);
     }
 
     private <B extends AwsClientBuilder<B, C>, C> C localStack(B builder) {

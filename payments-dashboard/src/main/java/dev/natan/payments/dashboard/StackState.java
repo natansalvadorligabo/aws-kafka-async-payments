@@ -8,6 +8,7 @@ package dev.natan.payments.dashboard;
  * @param deadLetters    messages on the DLQ
  * @param settled        payments marked DONE in the processed-payments table
  * @param pendingClaims  PENDING claims: a delivery is settling them, or died and left them until the lease expires
+ * @param broker         where the API publishes: "sqs" or "kafka"
  * @param consumer       which consumer settles the queue: "lambda" or "spring"
  * @param consumerUp     whether that consumer is currently taking messages
  */
@@ -17,6 +18,7 @@ public record StackState(
         int deadLetters,
         int settled,
         int pendingClaims,
+        String broker,
         String consumer,
         boolean consumerUp) {
 }

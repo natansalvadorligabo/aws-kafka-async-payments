@@ -16,9 +16,9 @@ import tools.jackson.databind.json.JsonMapper;
 class FlowMonitorTest {
 
     private final StubStackReader stackReader = new StubStackReader();
-    private final FlowTimeline timeline = new FlowTimeline(Clock.systemUTC(), JsonMapper.builder().build());
+    private final FlowTimeline timeline = new FlowTimeline(Clock.systemUTC(), new MessageBodies(JsonMapper.builder().build()));
     private final FlowMonitor monitor =
-            new FlowMonitor(stackReader, new FakeConsumerSwitch(), timeline, new FlowStream(timeline));
+            new FlowMonitor(stackReader, new FakeConsumerSwitch(), timeline, new FlowStream(timeline), "sqs");
 
     @Test
     void turnsSettlementsAndDeadLettersIntoEvents() {

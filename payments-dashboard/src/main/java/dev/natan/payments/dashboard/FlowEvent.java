@@ -12,6 +12,7 @@ public record FlowEvent(long sequence, Instant at, Type type, UUID paymentId, St
 
     public enum Type {
         ACCEPTED,
+        APPENDED_TO_PARTITION,
         DUPLICATE_SENT,
         POISON_SENT,
         SETTLED,

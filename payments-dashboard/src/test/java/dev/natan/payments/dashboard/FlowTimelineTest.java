@@ -21,7 +21,7 @@ class FlowTimelineTest {
     private static final Instant NOW = Instant.parse("2026-10-21T12:00:00Z");
 
     private final FlowTimeline timeline =
-            new FlowTimeline(Clock.fixed(NOW, ZoneOffset.UTC), JsonMapper.builder().build());
+            new FlowTimeline(Clock.fixed(NOW, ZoneOffset.UTC), new MessageBodies(JsonMapper.builder().build()));
 
     @Test
     void settlementReportsTheLatencySinceAcceptance() {

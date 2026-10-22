@@ -33,7 +33,7 @@ class ScenarioControllerTest {
 
         @Bean
         FlowTimeline flowTimeline() {
-            return new FlowTimeline(Clock.systemUTC(), JsonMapper.builder().build());
+            return new FlowTimeline(Clock.systemUTC(), new MessageBodies(JsonMapper.builder().build()));
         }
     }
 

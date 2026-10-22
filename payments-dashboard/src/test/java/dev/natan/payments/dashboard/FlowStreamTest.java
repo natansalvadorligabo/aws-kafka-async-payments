@@ -24,7 +24,7 @@ class FlowStreamTest {
 
         @Bean
         FlowTimeline flowTimeline() {
-            return new FlowTimeline(Clock.systemUTC(), JsonMapper.builder().build());
+            return new FlowTimeline(Clock.systemUTC(), new MessageBodies(JsonMapper.builder().build()));
         }
     }
 
@@ -42,7 +42,7 @@ class FlowStreamTest {
         timeline.poisonSent();
 
         MvcResult tab = mvc.perform(get("/api/stream")).andExpect(request().asyncStarted()).andReturn();
-        stream.publish(new StackState(3, 1, 0, 0, 0, "lambda", true));
+        stream.publish(new StackState(3, 1, 0, 0, 0, "sqs", "lambda", true));
         timeline.consumerStopped("lambda");
 
         String received = tab.getResponse().getContentAsString();

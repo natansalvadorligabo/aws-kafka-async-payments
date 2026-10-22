@@ -14,9 +14,6 @@ import java.util.function.Consumer;
 
 import dev.natan.payments.contract.PaymentSettled;
 import dev.natan.payments.dashboard.FlowEvent.Type;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The recent history of payments through the stack, told as {@link FlowEvent}s to whoever subscribes.
@@ -31,16 +28,16 @@ public class FlowTimeline {
     private static final int CAPACITY = 300;
 
     private final Clock clock;
-    private final JsonMapper json;
+    private final MessageBodies messageBodies;
     private final Deque<FlowEvent> recent = new ArrayDeque<>();
     private final List<Consumer<FlowEvent>> subscribers = new CopyOnWriteArrayList<>();
     private final Map<UUID, Instant> acceptedAt = new HashMap<>();
     private final Map<UUID, Integer> duplicateSettlements = new HashMap<>();
     private long sequence;
 
-    public FlowTimeline(Clock clock, JsonMapper json) {
+    public FlowTimeline(Clock clock, MessageBodies messageBodies) {
         this.clock = clock;
-        this.json = json;
+        this.messageBodies = messageBodies;
     }
 
     public void subscribe(Consumer<FlowEvent> subscriber) {
@@ -53,7 +50,13 @@ public class FlowTimeline {
 
     public synchronized void accepted(UUID paymentId) {
         acceptedAt.put(paymentId, clock.instant());
-        record(Type.ACCEPTED, paymentId, "API answered 202; the payment is on SQS");
+        record(Type.ACCEPTED, paymentId, "API answered 202; the payment is queued");
+    }
+
+    /** Uses the time Kafka appended the record, so records already on the topic replay as history, not as news. */
+    public synchronized void appended(TopicRecord record) {
+        record(Type.APPENDED_TO_PARTITION, record.paymentId(), record.appendedAt(),
+                "key " + record.key() + " → partition " + record.partition() + ", offset " + record.offset());
     }
 
     public synchronized void duplicateSent(UUID paymentId) {
@@ -91,7 +94,7 @@ public class FlowTimeline {
     }
 
     public synchronized void deadLettered(DeadLetter deadLetter) {
-        record(Type.DEAD_LETTERED, paymentIdIn(deadLetter.body()), "moved to the DLQ: " + abbreviate(deadLetter.body()));
+        record(Type.DEAD_LETTERED, messageBodies.paymentIdIn(deadLetter.body()), "moved to the DLQ: " + abbreviate(deadLetter.body()));
     }
 
     public synchronized void consumerStopped(String consumer) {
@@ -103,21 +106,16 @@ public class FlowTimeline {
     }
 
     private void record(Type type, UUID paymentId, String detail) {
-        FlowEvent event = new FlowEvent(++sequence, clock.instant(), type, paymentId, detail);
+        record(type, paymentId, clock.instant(), detail);
+    }
+
+    private void record(Type type, UUID paymentId, Instant at, String detail) {
+        FlowEvent event = new FlowEvent(++sequence, at, type, paymentId, detail);
         recent.addLast(event);
         if (recent.size() > CAPACITY) {
             recent.removeFirst();
         }
         subscribers.forEach(subscriber -> subscriber.accept(event));
-    }
-
-    private UUID paymentIdIn(String body) {
-        try {
-            JsonNode paymentId = json.readTree(body).path("paymentId");
-            return paymentId.isString() ? UUID.fromString(paymentId.asString()) : null;
-        } catch (JacksonException | IllegalArgumentException unreadable) {
-            return null;
-        }
     }
 
     private static String abbreviate(String body) {
