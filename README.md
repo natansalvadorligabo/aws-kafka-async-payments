@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/natansalvadorligabo/aws-kafka-async-payments/actions/workflows/ci.yml/badge.svg)](https://github.com/natansalvadorligabo/aws-kafka-async-payments/actions/workflows/ci.yml)
 
-Asynchronous payment intake inspired by Brazil's PIX: the API validates, queues and answers `202`, and a consumer settles each payment once.
+Asynchronous payment intake inspired by Brazil's PIX: the API validates, queues and answers `202`, and a consumer settles each payment, without losing any even if it crashes mid-way.
 A study project that compares SQS with Kafka and relational with non-relational storage, using tests that run fully locally (no AWS account).
 
 > **Study project.** It is not affiliated with Banco Central do Brasil and does not implement the PIX protocol. "PIX" only inspires the domain: an account pays a key, and settlement happens out of band.
@@ -46,7 +46,8 @@ flowchart LR
 
 - **The API acknowledges only after SQS accepts the message.** If no consumer is running, the payment waits on the queue.
 - **A message is deleted only after settlement succeeds.** When settlement throws, the message reappears after the visibility timeout. After `maxReceiveCount = 3` receives, SQS moves it to the DLQ.
-- **Idempotency.** SQS standard queues deliver *at least once*. Settlement first claims the `paymentId` with a DynamoDB conditional put (`attribute_not_exists`), so a second delivery becomes a no-op. If publishing fails after the claim, the claim is released so the redelivery can settle.
+- **Idempotency with a lease.** SQS standard queues deliver *at least once*. Settlement first claims the `paymentId` in DynamoDB as `PENDING` with an 8s lease, publishes, then marks it `DONE`. A later delivery that finds `DONE` is a duplicate and is ignored. One that finds a live `PENDING` lease fails, and the message comes back after the visibility timeout. A consumer that dies mid-settlement (OOM, kill, Lambda timeout) leaves a claim whose lease expires before SQS redelivers (8s < 10s), so the redelivery takes it over.
+- **Delivery guarantees.** No payment is lost. `PaymentSettled` is announced **at least once**: a consumer that dies after publishing but before `DONE` gets it published again, so subscribers deduplicate by `paymentId`. The stronger fix, an outbox written in the same transaction as the ledger, comes with stage 3.
 - **Two interchangeable consumers.** Both run the same framework-free `PaymentSettlement`. The Lambda reports failed records one by one (`ReportBatchItemFailures`), so one poison message does not send the whole batch back to the queue.
 
 | Module | Role |
@@ -97,6 +98,8 @@ Each behaviour has an automated test against real SQS/SNS/DynamoDB/Lambda APIs (
 | A failed attempt reappears after the visibility timeout (gap ≥ the queue's `VisibilityTimeout`) and then settles | `VisibilityTimeoutRedeliveryTest` | — (same SQS mechanism) |
 | A message that never settles ends up in the DLQ after 3 receives | `DeadLetterQueueTest` | `SettlePaymentsLambdaIT` |
 | The same payment delivered twice is settled once | `IdempotentSettlementTest` | `SettlePaymentsLambdaIT` |
+| A consumer that dies between claim and publish does not lose the payment: the redelivery takes over the expired lease | `CrashMidSettlementTest` | same `PaymentSettlement` |
+| Claim rules (`PENDING` + lease → `DONE`) hold on DynamoDB itself | `DynamoDbProcessedPaymentsTest` | |
 | Only the failing record of a batch is retried | — | `SettlePaymentsHandlerTest` |
 | Invalid request → `400`, nothing queued; valid → `202` and on SQS | `PaymentControllerTest`, `PaymentQueueingTest` | |
 
@@ -106,7 +109,7 @@ What stage 1 showed about SQS. The Kafka column will be filled in from what stag
 
 | | SQS (observed) | Kafka |
 |---|---|---|
-| Delivery | at least once; duplicates must be handled by the consumer (`IdempotentSettlementTest`) | stage 2 |
+| Delivery | at least once; duplicates must be handled by the consumer (`IdempotentSettlementTest`), and a consumer can die mid-message (`CrashMidSettlementTest`) | stage 2 |
 | Retry | built in: an undeleted message comes back after the visibility timeout (≥ 10s here) | stage 2 |
 | Poison messages | built-in DLQ via `RedrivePolicy` (`maxReceiveCount = 3`) | stage 2 |
 | Consumer down | messages wait; nothing to configure (`NoPaymentLostTest`) | stage 2 |
@@ -116,7 +119,7 @@ What stage 1 showed about SQS. The Kafka column will be filled in from what stag
 
 ## Postgres vs DynamoDB
 
-Stage 3. So far DynamoDB is only used as the idempotency store: a single conditional put decides "first delivery or duplicate".
+Stage 3. So far DynamoDB is only used as the idempotency store. One conditional put decides "take it, duplicate, or someone else is on it", and the lease expiry lives in that condition: DynamoDB TTL deletes items up to ~48h late, so it can only clean up.
 
 ## Results
 
@@ -124,7 +127,7 @@ Measured on one local machine (Windows 11, Docker Desktop 29.6, LocalStack 4.14.
 
 | Measurement | Value |
 |---|---|
-| Full suite (`./mvnw verify`, 34 tests, 4 modules with LocalStack) | 262 s, all green |
+| Full suite (`./mvnw verify`, 44 tests, 5 modules with LocalStack) | 265 s, all green |
 | Message that never settles → DLQ (visibility timeout 10s × 3 receives), Spring consumer | 42.9 s (test duration) |
 | Demo: 5 payments queued with the consumer down → settled after restart | 5 / 5, both consumers |
 | Message that never settles → DLQ, Lambda consumer, seen on the dashboard | 52 s (sent 22:38:15, dead-lettered 22:39:07) |
