@@ -20,12 +20,43 @@ services:
       interval: 3s
       retries: 40
 
+  kafka:
+    # KRaft mode (no ZooKeeper); same version as the kafka-clients Spring Boot manages.
+    image: apache/kafka:4.1.2
+    profiles: [kafka]
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # INTERNAL for containers on the compose network, EXTERNAL for the host (tests, CLI).
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Topics come from create-topics.sh only, so a typo cannot silently create a new one.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - ./infra/kafka/create-topics.sh:/opt/payments/create-topics.sh
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null"]
+      interval: 3s
+      retries: 40
+
   api:
     build: payments-api
     ports:
       - "8080:8080"
     environment:
       AWS_ENDPOINT: http://localstack:4566
+      BROKER: ${BROKER:-sqs}
+      KAFKA_BOOTSTRAP: kafka:29092
     depends_on:
       localstack:
         condition: service_healthy
