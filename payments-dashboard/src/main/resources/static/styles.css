@@ -335,8 +335,67 @@ button.link {
     color: var(--accent);
 }
 
-.timeline {
+.timeline, .topic {
     margin-top: 16px;
+}
+
+.topic {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.broker-note {
+    margin: 0 0 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    font-size: 13px;
+}
+
+.lane {
+    display: grid;
+    grid-template-columns: 40px 120px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.lane-name {
+    font-weight: 600;
+}
+
+.lane-end {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.chips {
+    display: flex;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.chip {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    white-space: nowrap;
+    color: #fff;
+    background: hsl(var(--hue) 55% 45%);
+}
+
+.chip.new {
+    animation: appear 600ms ease-out;
+}
+
+@keyframes appear {
+    from { transform: translateY(-8px); opacity: 0; }
+    to { transform: none; opacity: 1; }
 }
 
 .timeline-header {
@@ -392,6 +451,7 @@ tr.followed td {
 }
 
 .event.accepted { background: var(--accepted); }
+.event.appended_to_partition { background: var(--waiting); }
 .event.duplicate_sent, .event.duplicate_ignored { background: var(--duplicate); }
 .event.poison_sent, .event.dead_lettered, .event.consumer_stopped { background: var(--poison); }
 .event.settled, .event.consumer_started { background: var(--settled); }

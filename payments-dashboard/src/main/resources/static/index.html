@@ -29,6 +29,8 @@
 
 <main>
     <section class="diagram" aria-label="Architecture">
+        <p id="broker-note" class="broker-note" hidden>The API is publishing to <b>Kafka</b> (BROKER=kafka): the SQS path
+            below is idle. Watch the topic lanes further down.</p>
         <svg id="flow" viewBox="0 0 960 420" role="img" aria-label="Client, API, SQS, consumer, DynamoDB, SNS and DLQ">
             <defs>
                 <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -109,6 +111,15 @@
         <div id="concept-body"></div>
     </aside>
 </main>
+
+<section class="topic" id="topic" hidden aria-label="Kafka topic">
+    <div class="timeline-header">
+        <h2>Kafka · topic <code>payments</code></h2>
+        <span class="hint">One lane per partition. Same color = same account: it always lands in the same lane, in order.</span>
+        <button class="link" id="topic-concept">What am I looking at?</button>
+    </div>
+    <div id="lanes"></div>
+</section>
 
 <section class="timeline" aria-label="Event log">
     <div class="timeline-header">

@@ -112,6 +112,26 @@ ConditionExpression:
     }
 };
 
+CONCEPTS.kafka = {
+    title: 'Kafka: a log split into partitions',
+    body: `
+        <p>A topic is an append-only log, split into <b>partitions</b> (6 here). Each record gets the next
+        <b>offset</b> of its partition. Offsets only grow and are never reused.</p>
+        <p><b>The key picks the partition</b>: <code>hash(key) % partitions</code>. The API uses the
+        <code>accountId</code> as the key, so all of an account's payments land in the same lane, in the order they
+        were accepted. Kafka keeps order <b>within a partition only</b>. There is no global order across lanes.</p>
+        <p><b>Reading does not delete.</b> Unlike SQS, a consumed record stays in the log until retention removes it.
+        Each consumer group just remembers how far it has read (its offset per partition). That is what makes replay
+        possible.</p>
+        <p><b>Parallelism has a ceiling:</b> inside one consumer group, a partition is read by at most one consumer.
+        6 partitions means at most 6 consumers working in parallel per group.</p>
+        <p>This dashboard reads with <code>assign()</code>, without a consumer group, so watching never moves anyone's
+        offsets.</p>
+        <h3>In the code</h3>
+        <p><code>KafkaPaymentQueue</code> (the key), <code>infra/kafka/create-topics.sh</code> (the partitions),
+        <code>KafkaPaymentsTopic</code>. Proven by <code>KafkaPaymentQueueingTest</code>.</p>`
+};
+
 const LIMITS = `
     <h3>What this view cannot see</h3>
     <p>SQS reports counts, not individual deliveries. Retries of a single message are not observable from the

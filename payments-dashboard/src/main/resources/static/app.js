@@ -21,6 +21,7 @@ const ROUTES = {
 
 const LABELS = {
     ACCEPTED: 'accepted',
+    APPENDED_TO_PARTITION: 'on partition',
     DUPLICATE_SENT: 'duplicate sent',
     POISON_SENT: 'poison sent',
     SETTLED: 'settled',
@@ -35,6 +36,7 @@ const ANIMATE_IF_NEWER_THAN_MS = 3000;
 const SEGMENT_MS = 450;
 const MAX_SQUARES = 24;
 const MAX_LOG_ROWS = 200;
+const MAX_CHIPS_PER_LANE = 14;
 
 const svg = document.getElementById('flow');
 const tokens = document.getElementById('tokens');
@@ -54,9 +56,15 @@ function connect() {
     source.onerror = () => setBadge(connection, 'reconnecting…', 'warn');
     source.addEventListener('state', message => renderState(JSON.parse(message.data)));
     source.addEventListener('flow', message => onFlow(JSON.parse(message.data)));
+    source.addEventListener('partitions', message => renderLanes(JSON.parse(message.data)));
+    source.addEventListener('record', message => addChip(JSON.parse(message.data)));
 }
 
 function renderState(state) {
+    const kafka = state.broker === 'kafka';
+    document.getElementById('topic').hidden = !kafka;
+    document.getElementById('broker-note').hidden = !kafka;
+
     text('waiting', state.waiting);
     text('in-flight', state.inFlight);
     text('dead-letters', state.deadLetters);
@@ -201,7 +209,52 @@ function bindControls() {
     });
 }
 
+function renderLanes(partitions) {
+    const lanes = document.getElementById('lanes');
+    for (const {partition, endOffset} of partitions) {
+        let lane = document.getElementById(`lane-${partition}`);
+        if (!lane) {
+            lane = document.createElement('div');
+            lane.className = 'lane';
+            lane.id = `lane-${partition}`;
+            lane.innerHTML = `<span class="lane-name">P${partition}</span><span class="lane-end"></span>` +
+                '<div class="chips"></div>';
+            lanes.appendChild(lane);
+        }
+        lane.querySelector('.lane-end').textContent = `next offset ${endOffset}`;
+    }
+}
+
+function addChip(record) {
+    const lane = document.getElementById(`lane-${record.partition}`);
+    if (!lane) {
+        return;
+    }
+    const chip = document.createElement('span');
+    const isLive = Date.now() - Date.parse(record.appendedAt) < ANIMATE_IF_NEWER_THAN_MS;
+    chip.className = isLive ? 'chip new' : 'chip';
+    chip.style.setProperty('--hue', hueOf(record.key ?? ''));
+    chip.textContent = `${record.key} · ${record.offset}`;
+    chip.title = `offset ${record.offset} · key ${record.key} · payment ${record.paymentId ?? '—'}`;
+    const chips = lane.querySelector('.chips');
+    chips.appendChild(chip);
+    while (chips.children.length > MAX_CHIPS_PER_LANE) {
+        chips.firstElementChild.remove();
+    }
+}
+
+// The same account always gets the same color. FNV-1a spreads keys that differ by one character (acc-1, acc-2)
+// across 12 well-separated hues; a plain sum would give them almost the same color.
+function hueOf(key) {
+    let hash = 0x811c9dc5;
+    for (const char of key) {
+        hash = Math.imul(hash ^ char.codePointAt(0), 0x01000193) >>> 0;
+    }
+    return (hash % 12) * 30;
+}
+
 function bindConcepts() {
+    document.getElementById('topic-concept').addEventListener('click', () => showConcept('kafka'));
     svg.querySelectorAll('.node').forEach(node => {
         node.addEventListener('click', () => showConcept(node.dataset.concept));
     });

@@ -79,6 +79,8 @@ services:
       API_URL: http://api:8080
       CONSUMER_URL: http://consumer:8082
       CONSUMER: ${CONSUMER:-lambda}
+      BROKER: ${BROKER:-sqs}
+      KAFKA_BOOTSTRAP: kafka:29092
     depends_on:
       localstack:
         condition: service_healthy
