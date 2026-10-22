@@ -3,6 +3,7 @@ package dev.natan.payments.lambda;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ class SettlePaymentsHandlerTest {
     private final JsonMapper json = JsonMapper.builder().build();
     private final SpySettlementNotifier notifier = new SpySettlementNotifier();
     private final SettlePaymentsHandler handler = new SettlePaymentsHandler(
-            new PaymentSettlement(new InMemoryProcessedPayments(), notifier, Clock.systemUTC()), json);
+            new PaymentSettlement(
+                    new InMemoryProcessedPayments(Clock.systemUTC(), Duration.ofSeconds(8)), notifier, Clock.systemUTC()), json);
 
     @Test
     void reportsOnlyTheRecordThatFailed() {

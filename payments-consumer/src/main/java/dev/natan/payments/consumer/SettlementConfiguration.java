@@ -1,6 +1,7 @@
 package dev.natan.payments.consumer;
 
 import java.time.Clock;
+import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -25,8 +26,10 @@ class SettlementConfiguration {
     }
 
     @Bean
-    ProcessedPayments processedPayments(DynamoDbClient dynamoDb, @Value("${payments.processed-table}") String table) {
-        return new DynamoDbProcessedPayments(dynamoDb, table);
+    ProcessedPayments processedPayments(
+            DynamoDbClient dynamoDb, @Value("${payments.processed-table}") String table, Clock clock,
+            @Value("${payments.claim-lease}") Duration lease) {
+        return new DynamoDbProcessedPayments(dynamoDb, table, clock, lease);
     }
 
     @Bean

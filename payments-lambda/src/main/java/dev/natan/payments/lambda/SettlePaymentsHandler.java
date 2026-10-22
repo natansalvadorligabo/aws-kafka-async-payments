@@ -1,6 +1,7 @@
 package dev.natan.payments.lambda;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +42,8 @@ public class SettlePaymentsHandler implements RequestHandler<SQSEvent, SQSBatchR
     /** Called by the Lambda runtime. AWS clients pick region and endpoint up from the environment. */
     public SettlePaymentsHandler() {
         this(new PaymentSettlement(
-                new DynamoDbProcessedPayments(DynamoDbClient.create(), requiredEnv("PROCESSED_TABLE")),
+                new DynamoDbProcessedPayments(DynamoDbClient.create(), requiredEnv("PROCESSED_TABLE"),
+                        Clock.systemUTC(), Duration.ofSeconds(Long.parseLong(requiredEnv("CLAIM_LEASE_SECONDS")))),
                 new SnsSettlementNotifier(SnsClient.create(), requiredEnv("SETTLED_TOPIC_ARN"), JSON),
                 Clock.systemUTC()), JSON);
     }

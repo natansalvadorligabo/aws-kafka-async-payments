@@ -4,9 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -17,10 +16,12 @@ class PaymentSettlementTest {
 
     private static final Instant NOW = Instant.parse("2026-10-19T12:00:00Z");
 
-    private final InMemoryProcessedPayments processedPayments = new InMemoryProcessedPayments();
+    private static final Duration LEASE = Duration.ofSeconds(8);
+
+    private final FakeClock clock = new FakeClock(NOW);
+    private final InMemoryProcessedPayments processedPayments = new InMemoryProcessedPayments(clock, LEASE);
     private final SpySettlementNotifier notifier = new SpySettlementNotifier();
-    private final PaymentSettlement settlement =
-            new PaymentSettlement(processedPayments, notifier, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final PaymentSettlement settlement = new PaymentSettlement(processedPayments, notifier, clock);
 
     @Test
     void settlesAPaymentAndAnnouncesIt() {
@@ -54,6 +55,44 @@ class PaymentSettlementTest {
 
         notifier.recover();
         settlement.settle(payment);
+        assertThat(notifier.published()).hasSize(1);
+    }
+
+    @Test
+    void paymentClaimedByAProcessThatDiedIsSettledByTheRedeliveryOnceTheLeaseExpires() {
+        PaymentRequested payment = payment();
+        notifier.crashOnNextPublish();
+        assertThatThrownBy(() -> settlement.settle(payment)).isInstanceOf(SimulatedCrash.class);
+
+        clock.advance(LEASE.plusSeconds(1));
+        settlement.settle(payment);
+
+        assertThat(notifier.published()).as("settled by the redelivery").singleElement()
+                .satisfies(settled -> assertThat(settled.paymentId()).isEqualTo(payment.paymentId()));
+    }
+
+    @Test
+    void deliveryThatFindsALiveLeaseIsRetriedNotIgnored() {
+        PaymentRequested payment = payment();
+        notifier.crashOnNextPublish();
+        assertThatThrownBy(() -> settlement.settle(payment)).isInstanceOf(SimulatedCrash.class);
+
+        clock.advance(LEASE.minusSeconds(1));
+
+        assertThatThrownBy(() -> settlement.settle(payment))
+                .isInstanceOf(SettlementInProgressException.class)
+                .hasMessageContaining(payment.paymentId().toString());
+        assertThat(notifier.published()).isEmpty();
+    }
+
+    @Test
+    void settledPaymentStaysSettledAfterTheLeaseWouldHaveExpired() {
+        PaymentRequested payment = payment();
+        settlement.settle(payment);
+
+        clock.advance(LEASE.multipliedBy(10));
+        settlement.settle(payment);
+
         assertThat(notifier.published()).hasSize(1);
     }
 

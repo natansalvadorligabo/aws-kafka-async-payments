@@ -16,7 +16,7 @@ awslocal lambda create-function --function-name "$FUNCTION" \
   --role "arn:aws:iam::$ACCOUNT:role/$FUNCTION" \
   --timeout 10 \
   --memory-size 512 \
-  --environment "Variables={PROCESSED_TABLE=processed-payments,SETTLED_TOPIC_ARN=arn:aws:sns:$REGION:$ACCOUNT:payment-settled}" \
+  --environment "Variables={PROCESSED_TABLE=processed-payments,CLAIM_LEASE_SECONDS=8,SETTLED_TOPIC_ARN=arn:aws:sns:$REGION:$ACCOUNT:payment-settled}" \
   >/dev/null
 awslocal lambda wait function-active-v2 --function-name "$FUNCTION"
 

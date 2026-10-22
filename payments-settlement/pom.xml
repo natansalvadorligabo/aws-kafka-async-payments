@@ -36,6 +36,11 @@
         </dependency>
 
         <dependency>
+            <groupId>dev.natan.payments</groupId>
+            <artifactId>payments-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>

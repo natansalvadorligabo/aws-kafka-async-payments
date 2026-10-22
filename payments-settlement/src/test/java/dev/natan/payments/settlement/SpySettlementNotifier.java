@@ -10,9 +10,14 @@ public class SpySettlementNotifier implements SettlementNotifier {
 
     private final List<PaymentSettled> published = new CopyOnWriteArrayList<>();
     private volatile boolean failing;
+    private volatile boolean crashing;
 
     @Override
     public void publish(PaymentSettled settled) {
+        if (crashing) {
+            crashing = false;
+            throw new SimulatedCrash("process died while publishing " + settled.paymentId());
+        }
         if (failing) {
             throw new IllegalStateException("notifier down, expected to be up for " + settled.paymentId());
         }
@@ -21,6 +26,10 @@ public class SpySettlementNotifier implements SettlementNotifier {
 
     public void failFromNowOn() {
         failing = true;
+    }
+
+    public void crashOnNextPublish() {
+        crashing = true;
     }
 
     public void recover() {
