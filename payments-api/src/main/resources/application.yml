@@ -8,7 +8,16 @@ spring:
       # LocalStack accepts any credentials; nothing here touches a real AWS account.
       access-key: test
       secret-key: test
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      # Kafka's default since 3.0, spelled out: the 202 waits for every in-sync replica.
+      acks: all
 
 logging.structured.format.console: ecs
 
-payments.queue: payments
+payments:
+  # sqs or kafka: which PaymentQueue the API publishes to.
+  broker: ${BROKER:sqs}
+  queue: payments
+  topic: payments
