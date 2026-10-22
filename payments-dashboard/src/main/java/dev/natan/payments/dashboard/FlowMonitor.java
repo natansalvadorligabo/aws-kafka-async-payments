@@ -33,7 +33,7 @@ class FlowMonitor {
                 timeline.queueDrained();
             }
             stream.publish(new StackState(counts.waiting(), counts.inFlight(), counts.deadLetters(),
-                    counts.processed(), consumerSwitch.consumer(), consumerSwitch.isOn()));
+                    counts.processed(), counts.pendingClaims(), consumerSwitch.consumer(), consumerSwitch.isOn()));
         } catch (RuntimeException e) {
             log.atWarn().setCause(e).log("stack not readable yet");
         }

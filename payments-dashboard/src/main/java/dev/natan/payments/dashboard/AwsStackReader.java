@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dev.natan.payments.contract.PaymentSettled;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.Select;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.Message;
@@ -41,7 +42,19 @@ class AwsStackReader implements StackReader {
                 Integer.parseInt(payments.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)),
                 Integer.parseInt(payments.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE)),
                 Integer.parseInt(deadLetters.get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)),
-                dynamoDb.scan(scan -> scan.tableName(PROCESSED_TABLE).select(Select.COUNT)).count());
+                // Items without a status predate PENDING/DONE claims and were only written for settled payments.
+                claimsMatching("#status = :status OR attribute_not_exists(#status)", "DONE"),
+                claimsMatching("#status = :status", "PENDING"));
+    }
+
+    private int claimsMatching(String filter, String status) {
+        return dynamoDb.scan(scan -> scan
+                        .tableName(PROCESSED_TABLE)
+                        .select(Select.COUNT)
+                        .filterExpression(filter)
+                        .expressionAttributeNames(Map.of("#status", "status"))
+                        .expressionAttributeValues(Map.of(":status", AttributeValue.fromS(status))))
+                .count();
     }
 
     @Override

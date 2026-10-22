@@ -61,6 +61,7 @@ function renderState(state) {
     text('in-flight', state.inFlight);
     text('dead-letters', state.deadLetters);
     text('processed', state.processed);
+    text('pending-claims', state.pendingClaims);
     renderQueue(state.waiting, state.inFlight);
 
     const consumerNode = document.getElementById('consumer-node');

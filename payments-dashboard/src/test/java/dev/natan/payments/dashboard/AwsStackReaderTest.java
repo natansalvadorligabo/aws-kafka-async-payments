@@ -6,6 +6,7 @@ import static org.awaitility.Awaitility.await;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import dev.natan.payments.contract.PaymentSettled;
 import dev.natan.payments.testsupport.PaymentsLocalStack;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -21,8 +23,8 @@ class AwsStackReaderTest {
 
     private final SqsClient sqs = PaymentsLocalStack.client(SqsClient.builder());
     private final JsonMapper json = JsonMapper.builder().build();
-    private final AwsStackReader reader =
-            new AwsStackReader(sqs, PaymentsLocalStack.client(DynamoDbClient.builder()), json);
+    private final DynamoDbClient dynamoDb = PaymentsLocalStack.client(DynamoDbClient.builder());
+    private final AwsStackReader reader = new AwsStackReader(sqs, dynamoDb, json);
 
     @Test
     void countsWaitingMessages() {
@@ -51,6 +53,25 @@ class AwsStackReaderTest {
                 .until(() -> reader.pollNewDeadLetters().stream().anyMatch(letter -> letter.body().equals(body)));
         assertThat(reader.pollNewDeadLetters()).noneMatch(letter -> letter.body().equals(body));
         assertThat(reader.counts().deadLetters()).isPositive();
+    }
+
+    @Test
+    void countsSettledPaymentsAndPendingClaimsSeparately() {
+        QueueCounts before = reader.counts();
+
+        putClaim("DONE");
+        putClaim("PENDING");
+        putClaim("PENDING");
+
+        QueueCounts after = reader.counts();
+        assertThat(after.processed() - before.processed()).isEqualTo(1);
+        assertThat(after.pendingClaims() - before.pendingClaims()).isEqualTo(2);
+    }
+
+    private void putClaim(String status) {
+        dynamoDb.putItem(put -> put.tableName(AwsStackReader.PROCESSED_TABLE).item(Map.of(
+                "paymentId", AttributeValue.fromS(UUID.randomUUID().toString()),
+                "status", AttributeValue.fromS(status))));
     }
 
     private void send(String queueName, String body) {

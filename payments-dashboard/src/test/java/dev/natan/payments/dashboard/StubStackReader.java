@@ -8,7 +8,7 @@ import dev.natan.payments.contract.PaymentSettled;
 /** Stub {@link StackReader}: returns whatever the test queued up, once. */
 class StubStackReader implements StackReader {
 
-    private QueueCounts counts = new QueueCounts(0, 0, 0, 0);
+    private QueueCounts counts = new QueueCounts(0, 0, 0, 0, 0);
     private final List<PaymentSettled> settled = new ArrayList<>();
     private final List<DeadLetter> deadLetters = new ArrayList<>();
 

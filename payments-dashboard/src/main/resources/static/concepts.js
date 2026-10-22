@@ -68,13 +68,26 @@ const CONCEPTS = {
         title: 'DynamoDB: idempotency',
         body: `
             <p>Because of at-least-once delivery, a consumer can see the same payment twice. Before settling, it
-            <b>claims</b> the <code>paymentId</code> with a conditional put:</p>
-            <pre>PutItem … ConditionExpression: attribute_not_exists(paymentId)</pre>
-            <p>The first delivery wins. A second delivery fails the condition and becomes a no-op. If announcing the
-            settlement fails afterwards, the claim is deleted so the redelivery can try again.</p>
-            <p>The counter shows the items in the <code>processed-payments</code> table.</p>
+            <b>claims</b> the <code>paymentId</code>: a <code>PENDING</code> item with a lease of 8s.</p>
+            <pre>PutItem status=PENDING, leaseUntil=now+8s
+ConditionExpression:
+  attribute_not_exists(paymentId)
+  OR (status = PENDING AND leaseUntil &lt; now)</pre>
+            <p>After announcing the settlement, the item becomes <code>DONE</code>. A later delivery then finds
+            <b>DONE</b>: a duplicate, ignored. If it finds <b>PENDING with a live lease</b>, another delivery is busy, so it
+            fails and the message comes back later. It must not be ignored.</p>
+            <p><b>Why a lease?</b> A consumer that dies between claim and publish (OOM, kill, Lambda timeout) would
+            otherwise leave a claim behind forever. The redelivery would take it for a duplicate, and the payment would
+            never settle. The lease (8s) is shorter than the visibility timeout (10s), so by the time SQS redelivers
+            an abandoned message, its claim can be taken over.</p>
+            <p><b>The price:</b> a consumer that dies <i>after</i> publishing but before <code>DONE</code> gets its
+            notification published again. <code>PaymentSettled</code> is at-least-once, so subscribers deduplicate by
+            <code>paymentId</code>.</p>
+            <p>The lease is checked in the condition, not with DynamoDB TTL: TTL deletes items up to ~48h late.</p>
             <h3>In the code</h3>
-            <p><code>DynamoDbProcessedPayments</code>. Proven by <code>IdempotentSettlementTest</code>.</p>`
+            <p><code>DynamoDbProcessedPayments</code>, <code>PaymentSettlement</code>. Proven by
+            <code>IdempotentSettlementTest</code>, <code>CrashMidSettlementTest</code> and
+            <code>DynamoDbProcessedPaymentsTest</code>.</p>`
     },
     sns: {
         title: 'SNS: announcing the settlement',
